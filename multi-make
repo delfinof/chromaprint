@@ -12,7 +12,7 @@
 # (c) Copyright 2015 - Patrick Horton
 
 
-FFMPEG_VERSION=multi-tip
+FFMPEG_VERSION=0.9
     # This is explicity set by the branch checkout
 
 START_DIR=$PWD
@@ -45,7 +45,7 @@ function make_one
 
 if [ $# -eq 0 ]
 then
-    echo "Usage  multi-make (all|win|x86|arm|arm7|x86s|arms|arm7s|host) [make_params] ...";
+    echo "Usage  multi-make  (all|win|x86|arm|arm7|x86s|arms|arm7s) [make_params] ...";
 else
 
     BUILD=$1

@@ -28,7 +28,7 @@
 # (c) Copyright 2015 - Patrick Horton
 
 
-FFMPEG_VERSION=multi-tip
+FFMPEG_VERSION=0.9
     # This is explicity set by the branch checkout
 
 START_DIR=$PWD
@@ -168,7 +168,7 @@ function configure_one
     mkdir -p $BUILD_DIR/examples
     mkdir -p $INSTALL_DIR
 
-    # Create the per-platform makefile!!
+    # Create the per-platform makefile
 
     cat << EOF > $BUILD_DIR/Makefile
 #-----------------------------------------------------

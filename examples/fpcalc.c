@@ -31,7 +31,7 @@
 // for beefed up -version and new -md5 features
 
 #include <config.h>
-#include <libavutil/ffversion.h>
+#include <version.h>
 #define stringize2(aaa)  #aaa
 #define stringize(aaa) stringize2(aaa)
 
@@ -81,7 +81,7 @@ int decode_audio_file(ChromaprintContext *chromaprint_ctx, const char *file_name
 	AVStream *stream = NULL;
 	AVFrame *frame = NULL;
 #if defined(HAVE_SWRESAMPLE)
-	SwrContext *convert_ctx = NULL;
+	struct SwrContext *convert_ctx = NULL;
 #elif defined(HAVE_AVRESAMPLE)
 	AVAudioResampleContext *convert_ctx = NULL;
 #else
@@ -288,7 +288,7 @@ done:
 		avcodec_close(codec_ctx);
 	}
 	if (format_ctx) {
-		avformat_close_input(&format_ctx);
+		av_close_input_file(format_ctx);
 	}
 
 	if (ok && with_stream_md5)
@@ -435,7 +435,7 @@ int fpcalc_main(int argc, char **argv)
 				continue;
 			}
 			printf(with_fingerprint_ints?"FINGERPRINT_INTS=":"FINGERPRINT=");
-			for (j = 0; j < raw_fingerprint_size; j++) {
+            for (j = 0; j < raw_fingerprint_size; j++) {
 				printf("%d%s", raw_fingerprint[j], j + 1 < raw_fingerprint_size ? "," : "");
 			}
 			printf("\n");
