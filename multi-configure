@@ -1,0 +1,237 @@
+#!/bin/bash
+#--------------------------------------------------------------------
+# multi-configure - create makefiles for chromaprint for out of tree builds
+#--------------------------------------------------------------------
+# This script is run in the chromaprint source directory,
+# to create out-of-tree configurations to build
+# statically linked versions fpcalc executables
+# and libraries
+#
+#  ./multi-configure  [all | win | x86 | arm | arm7 | x86s | arms | arms7 | host]
+#
+# Usage:
+#
+#   ./multi-configure all
+#   ./multi-make all
+#   ./multi-make all install
+#
+#-------------------------------------------------------
+#
+# This file is distributed under the GNU GENERAL PUBLIC LICENSE version 2.
+# Please see the file `COPYING.txt` for details.
+#
+# You are free to modify it, and distribute in any way you see fit,
+# as long as you retain this notification and all copyrights herein.
+#
+# This software is provided without any warranty, explicit or implied.
+#
+# (c) Copyright 2015 - Patrick Horton
+
+
+FFMPEG_VERSION=multi-tip
+    # This is explicity set by the branch checkout
+
+START_DIR=$PWD
+    # The current working directory
+HOST_PREFIX=_linux
+    # Default host platform for the ndk
+HOST_PLATFORM=linux-x86
+    # The platform for this host within the ndk
+
+if [ "$WINDIR" != "" ]
+then
+    HOST_PREFIX=_win
+    HOST_PLATFORM=windows
+fi
+
+VBOX_SHARED_FOLDER=1
+    # This define has no effect on _win host builds.
+    # On vbox _linux host builds, this fixes the strip
+    # Protocol Error and symlinked makefile problems.
+
+JNI_LOGGING=1
+    # set this to non-blank 1 to include android -llog and
+    # to build a version that logs details about the call
+    # to JNI_OnLoad().  Set to nothing (<cr>) to turn it off.
+
+#------------------------------------------------
+# configure one
+#------------------------------------------------
+
+function configure_one
+{
+    BUILD=$1
+    ARCH=$2
+    ABI=$3
+    JNI=$4
+
+    EXESUF=
+    EXEPREF=
+    TOOLCHAIN=
+    SYSROOT=
+    CFLAGS=
+    CXXFLAGS=
+    LDFLAGS=
+    LDLIBS=
+    FFMPEG_ARCH=$BUILD
+
+    echo "    configure_one($FFMPEG_VERSION) $BUILD $ARCH $JNI"
+
+    if [ "$BUILD" == "host" ]
+    then
+
+        # _linux host build needs -lrt for clock_gettime()
+        # and explicit -lz for compress, and they have to
+        # come after the ffmpeg libraries
+
+        LDLIBS="$LDLIBS -lrt -lz"
+
+    elif [ "$BUILD" == "win" ]
+    then
+
+        # The windows build is the second simplest.
+
+        EXESUF=".exe"
+        test "$HOST_PREFIX" == "_linux" && TOOLCHAIN="i586-mingw32msvc-"
+
+    else    # !win == android
+
+        # All android builds have some stuff in common
+
+        SYSROOT="$NDK/platforms/android-9/arch-$ARCH"
+        CFLAGS="$CFLAGS -fpic"
+        CXXFLAGS="$CXXFLAGS -nostdinc++ -I$NDK/sources/cxx-stl/stlport/stlport -D__STDC_CONSTANT_MACROS"
+        LDLIBS="$LDLIBS -lstlport_static -lstdc++ -lc -lm -lz"
+        LDFLAGS="$LDFLAGS -L$NDK/sources/cxx-stl/stlport/libs/$ABI"
+
+        # different toolchains for x86 and arm
+        # filter the "s" out of FFMPEG_ARCH, since it's only built win/arm/x86.
+
+        if [ "$ARCH" == "arm" ]
+        then
+
+            CFLAGS="$CFLAGS -marm"
+            TOOLCHAIN="$NDK/toolchains/arm-linux-androideabi-4.8/prebuilt/$HOST_PLATFORM/bin/arm-linux-androideabi-"
+            FFMPEG_ARCH=arm
+
+            if [ "$BUILD" == "arm7" -o "$BUILD" == "arm7s" ]
+            then
+                FFMPEG_ARCH=arm7
+                CFLAGS="$CFLAGS -mcpu=cortex-a9 -mfloat-abi=softfp -mfpu=vfpv3"
+                    # or?? -mcpu=arm7
+            fi
+
+        else    # !arm == x86
+
+            TOOLCHAIN="$NDK/toolchains/x86-4.8/prebuilt/$HOST_PLATFORM/bin/i686-linux-android-"
+            FFMPEG_ARCH=x86
+
+        fi
+
+        # add -DJNI and stuff for android shared library builds
+
+        if [ -n "$JNI" ]
+        then
+            CFLAGS="$CFLAGS -DJNI=$JNI"
+            LDFLAGS="$LDFLAGS -shared"
+            EXESUF=".so"
+            EXEPREF="lib"
+
+            if [ -n "$JNI_LOGGING" ]
+            then
+                LDLIBS="$LDLIBS -llog"
+                CFLAGS="$CFLAGS -DJNI_LOGGING=1"
+            fi
+       fi   # jni builds
+
+    fi   # android builds
+
+    # strip did not work on a vbox linux shared folder
+    # so multi-strip just copies the file to a non-shared
+    # folder, strips it, and copies it back.
+
+    STRIP="${TOOLCHAIN}strip"
+    test "$WINDIR" == "" -a $VBOX_SHARED_FOLDER && \
+        STRIP="$START_DIR/multi-strip ${TOOLCHAIN}"
+
+    # Create all the sub directories for the build
+
+    FHB=$FFMPEG_VERSION/$HOST_PREFIX/$BUILD
+    BUILD_DIR=$START_DIR/../_build/chromaprint/$FHB
+    INSTALL_DIR=$START_DIR/../_install/$FHB
+
+    CFLAGS="$CFLAGS -Wno-deprecated-declarations"
+
+    mkdir -p $BUILD_DIR
+    mkdir -p $BUILD_DIR/src
+    mkdir -p $BUILD_DIR/src/avresample
+    mkdir -p $BUILD_DIR/examples
+    mkdir -p $INSTALL_DIR
+
+    # Create the per-platform makefile!!
+
+    cat << EOF > $BUILD_DIR/Makefile
+#-----------------------------------------------------
+# Makefile generated by multi-configure
+#-----------------------------------------------------
+
+ARCH=$ARCH
+JNI=$JNI
+BUILD=$BUILD
+EXESUF=$EXESUF
+EXEPREF=$EXEPREF
+HOST_PREFIX=$HOST_PREFIX
+SOURCE_DIR=$START_DIR
+BUILD_DIR=$BUILD_DIR
+INSTALL_DIR=$INSTALL_DIR
+FFMPEG_DIR=$START_DIR/../_build/ffmpeg/$FFMPEG_VERSION/$HOST_PREFIX/$FFMPEG_ARCH
+SYSROOT=$SYSROOT
+TOOLCHAIN=$TOOLCHAIN
+STRIP=$STRIP
+
+CFLAGS=$CFLAGS
+CXXFLAGS=$CXXFLAGS
+LDFLAGS=$LDFLAGS
+LDLIBS=$LDLIBS
+
+include \$(SOURCE_DIR)/multi-makefile
+
+EOF
+
+    cd $START_DIR
+}   # configure_one
+
+
+
+#-----------------
+# main
+#-----------------
+
+echo
+echo "multi-configure chromaprint($FFMPEG_VERSION) $@"
+echo
+
+for PARAM in "$@"
+do
+
+    test "$PARAM" == "all" -o "$PARAM" == "win" &&  configure_one win  x86 x86
+    test "$PARAM" == "all" -o "$PARAM" == "x86" &&  configure_one x86  x86 x86
+    test "$PARAM" == "all" -o "$PARAM" == "arm" &&  configure_one arm  arm armeabi
+    test "$PARAM" == "all" -o "$PARAM" == "arm7" && configure_one arm7  arm armeabi
+    test "$PARAM" == "all" -o "$PARAM" == "x86s" && configure_one x86s x86 x86 1
+    test "$PARAM" == "all" -o "$PARAM" == "arms" && configure_one arms arm armeabi 1
+    test "$PARAM" == "all" -o "$PARAM" == "arm7s" && configure_one arm7s arm armeabi 1
+
+    # multi-configure host must be explicitly provided
+    # the host configure is not part of all (and does
+    # not work on windows, use "win" build instead)
+
+    test "$PARAM" == "host" && configure_one host
+
+done
+
+echo
+echo "multi-configure chromaprint($FFMPEG_VERSION) finished"
+echo
+
+cd $START_DIR

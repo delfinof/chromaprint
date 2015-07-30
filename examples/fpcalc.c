@@ -21,6 +21,12 @@
 #define avcodec_free_frame av_freep
 #endif
 
+#ifdef JNI
+	extern void jni_output(const char* format, ...);
+	#define fprintf(unused,...) jni_output(__VA_ARGS__)
+	#define printf(...)         jni_output(__VA_ARGS__)
+#endif
+
 // prh 2015-07-29
 // for beefed up -version and new -md5 features
 

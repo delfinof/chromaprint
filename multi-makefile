@@ -1,0 +1,158 @@
+#----------------------------------------------------
+# multi-makefile for chromaprint
+#----------------------------------------------------
+# Common makefile called by all host/target combinations
+# receives a set of common variables, BUILD, ARCH, TOOLCHAIN,
+# etc from the makefiles built by multi-configure, and some
+# cosmetic control variables from multi-make.
+#
+# Doesn't do dependencies .. when in doubt,
+# multi-make all clean.
+#
+# To redirect jni stdout to android studio logcat:
+#
+#   adb root
+#   adb shell stop
+#   adb shell setprop log.redirect-stdio true
+#   adb shell start
+#
+#-------------------------------------------------------
+#
+# This file is distributed under the GNU GENERAL PUBLIC LICENSE version 2.
+# Please see the file `COPYING.txt` for details.
+#
+# You are free to modify it, and distribute in any way you see fit,
+# as long as you retain this notification and all copyrights herein.
+#
+# This software is provided without any warranty, explicit or implied.
+#
+# (c) Copyright 2015 - Patrick Horton
+
+
+$(info chromaprint multi-makefile for BUILD=$(BUILD))
+
+VPATH=src:src/avresample:examples
+
+OBJS_EXE = fpcalc.o
+
+ifneq "$(JNI)" ""
+    OBJS_EXE += fpcalc_jni.o jni_utils.o
+endif
+
+
+OBJS_AVR = resample2.o
+
+OBJS_SRC = chromaprint.o 						\
+	audio_processor.o                           \
+	base64.o                                    \
+	chroma.o                                    \
+	chroma_filter.o                             \
+	chroma_resampler.o                          \
+	fft.o                                       \
+	fft_lib_avfft.o 							\
+	filter.o                                    \
+	fingerprint_calculator.o                    \
+	fingerprint_compressor.o                    \
+	fingerprint_decompressor.o                  \
+	fingerprinter_configuration.o               \
+	fingerprinter.o                             \
+	image_builder.o                             \
+	integral_image.o                            \
+	lloyds.o                                    \
+	silence_remover.o                           \
+	simhash.o									\
+	spectral_centroid.o                         \
+	spectrum.o                                  \
+
+
+CXXOBJS += $(OBJS_SRC:%=$(BUILD_DIR)/src/%)
+COBJS += $(OBJS_AVR:%=$(BUILD_DIR)/src/avresample/%)
+COBJS += $(OBJS_EXE:%=$(BUILD_DIR)/examples/%)
+
+# commands
+
+RM = rm -f
+CP = cp -P
+CC = $(TOOLCHAIN)gcc
+LD = $(TOOLCHAIN)g++
+CXX = $(TOOLCHAIN)g++
+
+ECHO   = printf "[$(BUILD)] $(1)\t%s\n" $(2)
+BRIEF  = CC CXX LD STRIP
+
+REMOVE  = @printf "[$(BUILD)] RM\t%s\n" $(1);  $(RM) $(1);
+INSTALL = @printf "[$(BUILD)] INSTALL\t%s\n" $(2);  $(CP) $(1) $(2);
+
+ifndef NOISY
+    $(foreach VAR,$(BRIEF), \
+    	$(eval override $(VAR) = @$$(call ECHO,$(VAR),$$(notdir $$@)); $($(VAR))))
+else
+    CR=echo;
+endif
+
+# flags
+
+CFLAGS += -I$(FFMPEG_DIR)/include
+CFLAGS += -I$(FFMPEG_DIR)/build
+CFLAGS += -I$(SOURCE_DIR)/src
+CFLAGS += \
+	-DHAVE_CONFIG_H=1                      	\
+	-D_USE_MATH_DEFINES                    	\
+	-D__STDC_CONSTANT_MACROS			   	\
+	-D__STDC_LIMIT_MACROS                  	\
+	-DCHROMAPRINT_NODLL=1				   	\
+	-DHAVE_SWRESAMPLE=1					   	\
+	-DWITH_AVFFT=ON 						\
+
+ifneq "$(SYSROOT)" ""
+    CFLAGS += --sysroot="$(SYSROOT)"
+    LDFLAGS+= --sysroot="$(SYSROOT)"
+endif
+
+CXXFLAGS += $(CFLAGS)
+LDFLAGS  += -L$(FFMPEG_DIR)/lib
+FFMPEG_LIBS = -lavformat -lavcodec -lavutil -lswresample
+
+# target names
+
+EXE_NAME=$(EXEPREF)fpcalc$(EXESUF)
+EXEG_NAME=$(EXEPREF)fpcalc_g$(EXESUF)
+
+
+#---------------
+# targets
+#---------------
+
+.PHONY: all clean install
+
+all : $(EXE_NAME)
+
+$(EXE_NAME) : $(EXEG_NAME)
+	$(CR)
+	@$(CP) $(EXEG_NAME) $(EXE_NAME)
+	$(STRIP) $(EXE_NAME)
+
+$(EXEG_NAME) :  $(COBJS) $(CXXOBJS)
+	$(CR)
+	$(LD)     $(LDFLAGS)     -o $@    $(COBJS)      $(CXXOBJS)      $(FFMPEG_LIBS)   $(LDLIBS)
+
+$(COBJS): $(BUILD_DIR)/%.o: $(SOURCE_DIR)/%.c
+	$(CR)
+	$(CC) -c $(CFLAGS) $< -o $@
+
+$(CXXOBJS): $(BUILD_DIR)/%.o: $(SOURCE_DIR)/%.cpp
+	$(CR)
+	$(CXX) -c $(CXXFLAGS) $< -o $@
+
+clean:
+	$(call REMOVE,$(EXE_NAME))
+	$(call REMOVE,$(EXEG_NAME))
+	$(call REMOVE,src/*.o)
+	$(call REMOVE,src/avresample/*.o)
+	$(call REMOVE,examples/*.o)
+
+install: all
+	$(call INSTALL,$(BUILD_DIR)/$(EXE_NAME),$(INSTALL_DIR)/$(EXE_NAME))
+
+
+# end of multi-makefile

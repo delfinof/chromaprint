@@ -1,0 +1,34 @@
+#!/bin/bash
+#-------------------------------------------------------
+#
+# This file is distributed under the GNU GENERAL PUBLIC LICENSE version 2.
+# Please see the file `COPYING.txt` for details.
+#
+# You are free to modify it, and distribute in any way you see fit,
+# as long as you retain this notification and all copyrights herein.
+#
+# This software is provided without any warranty, explicit or implied.
+#
+# (c) Copyright 2015 - Patrick Horton
+
+if [ $# -eq 0 -o $# -gt 2 ]
+then
+    echo "Usage: strip [toolchain-prefix] file"
+    echo
+    echo "Copies the file to the home directory and executes strip"
+    echo "using the toolchain prefix if provided, then copies it back"
+    exit 2
+fi
+
+FILENAME=$1
+
+if [ $# -eq 2 ]
+then
+    TOOLCHAIN=$1
+    FILENAME=$2
+fi
+
+cp $FILENAME ~/
+$TOOLCHAIN"strip" ~/$FILENAME
+cp ~/$FILENAME .
+rm ~/$FILENAME

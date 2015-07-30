@@ -1,0 +1,79 @@
+#!/bin/bash
+#-------------------------------------------------------
+#
+# This file is distributed under the GNU GENERAL PUBLIC LICENSE version 2.
+# Please see the file `COPYING.txt` for details.
+#
+# You are free to modify it, and distribute in any way you see fit,
+# as long as you retain this notification and all copyrights herein.
+#
+# This software is provided without any warranty, explicit or implied.
+#
+# (c) Copyright 2015 - Patrick Horton
+
+
+FFMPEG_VERSION=multi-tip
+    # This is explicity set by the branch checkout
+
+START_DIR=$PWD
+HOST_PREFIX=_linux
+test "$WINDIR" != ""  && HOST_PREFIX=_win
+BUILD_BASE=$START_DIR/../_build/chromaprint/$FFMPEG_VERSION/$HOST_PREFIX
+noisy_string=
+
+
+function make_one
+{
+    echo
+    echo "------------------------------------"
+    echo "make_one($FFMPEG_VERSION) $DO_BUILD $noisy_string$@"
+    echo "------------------------------------"
+
+    cd $BUILD_BASE/$DO_BUILD
+
+    make $@
+    if [ $? -ne 0 ]
+    then
+        echo There was an error in $PLAT BUILD $@
+        cd $START_DIR
+        exit 1
+    fi
+
+    echo
+}
+
+
+if [ $# -eq 0 ]
+then
+    echo "Usage  multi-make (all|win|x86|arm|arm7|x86s|arms|arm7s|host) [make_params] ...";
+else
+
+    BUILD=$1
+    shift
+
+    if [ "$1" == "noisy" ]
+    then
+        export NOISY=1
+        noisy_string="NOISY "
+        shift
+    fi
+
+    test "$BUILD" == "all" -o "$BUILD" == "win"   && DO_BUILD=win   && make_one $@
+    test "$BUILD" == "all" -o "$BUILD" == "x86"   && DO_BUILD=x86   && make_one $@
+    test "$BUILD" == "all" -o "$BUILD" == "arm"   && DO_BUILD=arm   && make_one $@
+    test "$BUILD" == "all" -o "$BUILD" == "arm7"  && DO_BUILD=arm7  && make_one $@
+    test "$BUILD" == "all" -o "$BUILD" == "x86s"  && DO_BUILD=x86s  && make_one $@
+    test "$BUILD" == "all" -o "$BUILD" == "arms"  && DO_BUILD=arms  && make_one $@
+    test "$BUILD" == "all" -o "$BUILD" == "arm7s" && DO_BUILD=arm7s && make_one $@
+
+    # the host build only takes place if there is a host build directory
+
+    if [ -d "$BUILD_BASE/host"  ]
+    then
+        test "$BUILD" == "all" -o "$BUILD" == "host" && DO_BUILD=host && make_one $@
+    fi
+
+fi
+
+
+cd $START_DIR
