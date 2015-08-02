@@ -47,8 +47,8 @@ As with the example(s) shown in the phorton1/ffmpeg repository, we will start fr
 ```bash
     mkdir /blah/fpcalc
     cd /blah/fpcalc
-    git clone https://phorton1@bitbucket.org/phorton1/ffmpeg.git
-    git clone https://phorton1@bitbucket.org/phorton1/chromaprint.git
+    git clone https://bitbucket.org/phorton1/ffmpeg.git
+    git clone https://bitbucket.org/phorton1/chromaprint.git
     cd ffmpeg
     git checkout multi-0.9
     ./multi-configure all host
