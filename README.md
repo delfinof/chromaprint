@@ -101,7 +101,7 @@ As mentioned in phorton1/fpalc-releases, the **jni_utils.c** file contains a nov
 
 ## Notes
 
-You can find a discussion of my motivation for this project, and an analysis of running all of the above executables and libraries [here].  The short answer is that **fpCalc appears to be sensitive to the the version of ffmpeg it is built against** and, to a lesser degree the platform it is built upon.
+You can find a discussion of my motivation for this project, and an analysis of running all of the above executables and libraries in the phorton1/fpcalc-test repository.  The short answer is that **fpCalc appears to be sensitive to the the version of ffmpeg it is built against** and, to a lesser degree the platform it is built upon.
 
 As such it is my recommendation that careful consideration of these sensitivities be given when producing "release" versions of fpCalc, inasmuch as different versions of ffmpeg will result in **significantly different fingerprints** for the same file, even on the same platform!
 
