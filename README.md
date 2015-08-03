@@ -42,7 +42,7 @@ In addition to the target platforms specified in phorton1/ffmpeg, this chromapri
 
 ### Example
 
-As with the example(s) shown in the phorton1/ffmpeg repository, we will start from scratch, get the source, and build all of the above target exectuables on a linux host platform using ffmpeg version 0.9, starting in the empty /blah/fpcalc directory we create:
+As with the example(s) shown in the phorton1/ffmpeg repository, we will start from scratch, get the source, and build all of the above target executables on a linux host platform using ffmpeg version 0.9, starting in the empty /blah/fpcalc directory we create:
 
 ```bash
     mkdir /blah/fpcalc
