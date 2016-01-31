@@ -65,6 +65,20 @@ void jni_output(const char* format, ...)
 	va_end(argptr);
 }
 
+char *fpCalcDllImport(int argc, char **argv)
+{
+	if (retval)
+	{
+     free(retval);
+     retval = NULL;
+	}
+     int rslt = fpcalc_main(argc,argv);
+     if (rslt == 1)
+     {
+         jni_output("error_fpcalc_main=1\n");
+     }
+	return retval;
+}
 
 //-------------------------------------------------
 // fpCalc()

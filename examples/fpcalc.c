@@ -101,18 +101,18 @@ int decode_audio_file(ChromaprintContext *chromaprint_ctx, const char *file_name
 
 	if (avformat_open_input(&format_ctx, file_name, NULL, NULL) != 0) {
 		fprintf(stderr, "ERROR: couldn't open the file\n");
-		goto done;
+		goto done2;
 	}
 
 	if (avformat_find_stream_info(format_ctx, NULL) < 0) {
 		fprintf(stderr, "ERROR: couldn't find stream information in the file\n");
-		goto done;
+		goto done2;
 	}
 
 	stream_index = av_find_best_stream(format_ctx, AVMEDIA_TYPE_AUDIO, -1, -1, &codec, 0);
 	if (stream_index < 0) {
 		fprintf(stderr, "ERROR: couldn't find any audio stream in the file\n");
-		goto done;
+		goto done2;
 	}
 
 	stream = format_ctx->streams[stream_index];
@@ -122,13 +122,13 @@ int decode_audio_file(ChromaprintContext *chromaprint_ctx, const char *file_name
 
 	if (avcodec_open2(codec_ctx, codec, NULL) < 0) {
 		fprintf(stderr, "ERROR: couldn't open the codec\n");
-		goto done;
+		goto done2;
 	}
 	codec_ctx_opened = 1;
 
 	if (codec_ctx->channels <= 0) {
 		fprintf(stderr, "ERROR: no channels found in the audio stream\n");
-		goto done;
+		goto done2;
 	}
 
 	if (codec_ctx->sample_fmt != AV_SAMPLE_FMT_S16) {
@@ -143,11 +143,11 @@ int decode_audio_file(ChromaprintContext *chromaprint_ctx, const char *file_name
 			0, NULL);
 		if (!convert_ctx) {
 			fprintf(stderr, "ERROR: couldn't allocate audio converter\n");
-			goto done;
+			goto done2;
 		}
 		if (swr_init(convert_ctx) < 0) {
 			fprintf(stderr, "ERROR: couldn't initialize the audio converter\n");
-			goto done;
+			goto done2;
 		}
 #elif defined(HAVE_AVRESAMPLE)
 		convert_ctx = avresample_alloc_context();
@@ -159,15 +159,15 @@ int decode_audio_file(ChromaprintContext *chromaprint_ctx, const char *file_name
 		av_opt_set_int(convert_ctx, "in_sample_rate", codec_ctx->sample_rate, 0);
 		if (!convert_ctx) {
 			fprintf(stderr, "ERROR: couldn't allocate audio converter\n");
-			goto done;
+			goto done2;
 		}
 		if (avresample_open(convert_ctx) < 0) {
 			fprintf(stderr, "ERROR: couldn't initialize the audio converter\n");
-			goto done;
+			goto done2;
 		}
 #else
 		fprintf(stderr, "ERROR: unsupported audio format (please build fpcalc with libswresample)\n");
-		goto done;
+		goto done2;
 #endif
 	}
 
@@ -179,7 +179,7 @@ int decode_audio_file(ChromaprintContext *chromaprint_ctx, const char *file_name
 	}
 	else {
 		fprintf(stderr, "ERROR: couldn't detect the audio duration\n");
-		goto done;
+		goto done2;
 	}
 
 	remaining = max_length * codec_ctx->channels * codec_ctx->sample_rate;
@@ -271,6 +271,7 @@ done:
 	av_free_packet(&packet);
 		// was missing on jumps out of loop
 
+done2:
 	if (frame) {
 		avcodec_free_frame(&frame);
 	}
@@ -293,6 +294,8 @@ done:
 
 	if (ok && with_stream_md5)
 		outputMD5("STREAM_MD5",stream_md5_ctx);
+
+
 	if (stream_md5_ctx)
 		av_free(stream_md5_ctx);
 
